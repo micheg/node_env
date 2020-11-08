@@ -1,0 +1,222 @@
+#! /bin/bash
+
+# globals
+DIR=$(pwd)
+PLAT="unk"
+ARCH="unk"
+
+# functions
+
+function list_version ()
+{
+    result=$(wget -qO- https://nodejs.org/dist/ | sort  -h)
+    $gg=""
+    for line in $result; do
+        if [[ $line == href=\"v* ]] 
+        then
+            tmp="${line/href=\"v/}"
+            tmp="${tmp/\/<\/a>/}"
+            tmp="${tmp/\/\"/}"
+            tmp="${tmp/>/ (ver: }"
+            tmp="$tmp), "
+            echo $tmp
+            gg+="${tmp}"
+        fi
+    done
+    echo $gg
+}
+
+function download ()
+{
+    url=$1
+    filename=$2
+
+    if [ -x "$(which wget)" ] ; then
+        wget -q $url -O $2
+        err_code=$?
+    elif [ -x "$(which curl)" ]; then
+        curl -o $2 -sfL $url
+        err_code=$?
+    else
+        exiting "Could not find curl or wget, please install one." >&2
+    fi
+    if [ $err_code -eq 0 ]
+    then
+        echo "Download complete"
+    else
+        echo "code $err_code"
+        exiting "wrong url"
+    fi
+}
+
+function dectect_arch_and_os ()
+{
+    # check os
+
+    unameOut="$(uname -s)"
+    case "${unameOut}" in
+        Linux*)     PLAT=linux;;
+        Darwin*)    PLAT=darwin;;
+        *)          PLAT="unk"
+    esac
+
+    # check arch
+    unameOut="$(uname -m)"
+    case "${unameOut}" in
+        x86_64*)    ARCH=x64;;
+        i386*)      ARCH=x86;;
+        i686*)      ARCH=x86;;
+        *)          ARCH="unk" # maybe arm o similar?
+    esac
+}
+
+function exiting ()
+{
+    msg=$1
+    echo $msg
+    set -e
+    exit 1
+}
+
+# check os / arch
+dectect_arch_and_os
+
+if [ $ARCH == "unk" ]
+then
+    exiting "UNKNOWN arch or os"
+fi
+
+if [ $PLAT == "unk" ]
+then
+    exiting "UNKNOWN arch or os"
+fi
+
+# read params
+
+if [ $# -eq 0 ]
+then
+    echo "Usage: node_env {NAME} {VERSION}"
+    echo "ex: node_env my_env 12.12.0"
+    echo "then"
+    echo ". my_env/bin/activate"
+    echo "or"
+    echo "node_env --list-version for installable versions"
+    exiting ""
+fi
+
+if [ -z "$1" ]
+then
+    exiting "No name supplied"
+fi
+
+
+if [ $1 == '--list-version' ]
+then
+    list_version
+    exiting ""
+fi
+
+if [ $1 == 'version' ]
+then
+    exiting "0.1 Alpha"
+fi
+
+
+if [ -z "$2" ]
+then
+    exiting "No version supplied"
+fi
+
+# getting current working dir
+output=$DIR/$1
+
+if [ -d "$output" ]; then
+    # dir exist do nothing
+    exiting "already existing directory"
+else
+    # make dir
+    mkdir -p $output/bin
+    mkdir -p $output/node
+fi
+
+# downloading
+VER=$2
+target_file="https://nodejs.org/dist/v$VER/node-v$VER-$PLAT-$ARCH.tar.gz"
+
+echo "Downloading $target_file"
+download $target_file $output/node/arch.tar.gz
+
+echo "Unpacking"
+cd $output/node
+tar xzf arch.tar.gz
+err_code=$?
+
+if [ $err_code -eq 0 ]
+then
+    rm arch.tar.gz
+else
+    exiting "something went wrong"
+fi
+
+cd $DIR
+
+#node_path=$output/bin/node
+node_path=$output/node/node-v$VER-$PLAT-$ARCH
+
+echo "Virtual environment node, $VER created."
+
+# template
+# see https://gist.githubusercontent.com/Jaheen/c1fa1660b2b66495dbbbc2f0ff079dd2/raw/baf0ce452665773291260b088726090e5a10e540/activate
+cat > $output/bin/activate <<-EOF
+
+if [[ "\${BASH_SOURCE-}" = "\$0" ]]; then
+    echo "You must source this script: \\$ source \$0" >&2
+    exit 33
+fi
+
+deactivate (){
+    # ! [ -z \${VAR+_} ] returns true if VAR is declared at all
+    if ! [ -z "\${_OLD_VIRTUAL_PATH:+_}" ] ; then
+        PATH="\$_OLD_VIRTUAL_PATH"
+        export PATH
+        unset _OLD_VIRTUAL_PATH
+    fi
+    if [ -n "\${BASH-}" ] || [ -n "\${ZSH_VERSION-}" ] ; then
+        hash -r 2>/dev/null
+    fi
+
+    if ! [ -z "\${_OLD_VIRTUAL_PS1+_}" ] ; then
+        PS1="\$_OLD_VIRTUAL_PS1"
+        export PS1
+        unset _OLD_VIRTUAL_PS1
+    fi
+
+    unset VIRTUAL_ENV
+    if [ ! "\${1-}" = "nondestructive" ] ; then
+    # Self destruct!
+        unset -f deactivate
+    fi
+}
+
+NODE_ENV="$node_path"
+export NODE_ENV
+
+_OLD_VIRTUAL_PATH="\$PATH"
+
+PATH="\$NODE_ENV/bin:\$PATH"
+export PATH
+
+if [ -z "\${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
+    _OLD_VIRTUAL_PS1="\${PS1-}"
+    if [ "x" != x ] ; then
+        PS1="\${PS1-}"
+    else
+        PS1="(node_env_$VER) \${PS1-}"
+    fi
+    export PS1
+fi
+
+if [ -n "\${BASH-}" ] || [ -n "\${ZSH_VERSION-}" ] ; then
+    hash -r 2>/dev/null
+fi
+EOF
