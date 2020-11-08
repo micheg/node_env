@@ -19,21 +19,21 @@ Probably with a busybox portable it could also work on Windows, I'll test it as 
 
 node_env **{NAME}** **{VERSION}**, ex:
   
-		node_env my_env 12.12.0
+	node_env my_env 12.12.0
   
 then:
 
-		. my_env/bin/activate
+	. my_env/bin/activate
   
 or
   
-		node_env --list-version for installable versions
+	node_env --list-version for installable versions
 
 You can use the script directly from the network:
 
-		curl -s https://raw.githubusercontent.com/micheg/node_env/main/node_env | bash -s -- --list-version
+	curl -s https://raw.githubusercontent.com/micheg/node_env/main/node_env | bash -s -- --list-version
 
-		curl -s https://raw.githubusercontent.com/micheg/node_env/main/node_env | bash -s my_env2 12.12.0
+	curl -s https://raw.githubusercontent.com/micheg/node_env/main/node_env | bash -s my_env2 12.12.0
 
 # to do:
 A lot of things.
