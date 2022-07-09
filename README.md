@@ -37,3 +37,6 @@ You can use the script directly from the network:
 
 # to do:
 A lot of things.
+
+# status:
+At the moment the status is stopped in "maintenance" I use this script in my projects but new features will not be added.
