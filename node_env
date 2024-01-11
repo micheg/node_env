@@ -12,7 +12,7 @@ function list_version ()
     result=$(wget -qO- https://nodejs.org/dist/ | sort  -h)
     $gg=""
     for line in $result; do
-        if [[ $line == href=\"v* ]] 
+        if [[ $line == href=\"v* ]]
         then
             tmp="${line/href=\"v/}"
             tmp="${tmp/\/<\/a>/}"
@@ -66,6 +66,7 @@ function dectect_arch_and_os ()
         x86_64*)    ARCH=x64;;
         i386*)      ARCH=x86;;
         i686*)      ARCH=x86;;
+        arm64*)     ARCH=arm64;;
         *)          ARCH="unk" # maybe arm o similar?
     esac
 }
